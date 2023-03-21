@@ -19,19 +19,17 @@ class TextViewDelegate: NSObject, UITextViewDelegate {
     }
     
     public func textViewDidBeginEditing(_ textView: UITextView) {
-        if self.textView.attributedText.string == self.textView._properties.placeholderAttrText?.string {
-            self.textView.text = ""
-        }
-        self.textView.didBeginEditingHandler?()
-        self.textView.didBeginEditingHandlerText?(self.textView)
+        self.textView.placeholderLabel.isHidden = true
+        self.textView.didBeginEditingHandler.forEach { $0() }
+        self.textView.didBeginEditingHandlerText.forEach { $0(self.textView) }
     }
 
     public func textViewDidEndEditing(_ textView: UITextView) {
-        if self.textView.text.count == 0, let text = self.textView._properties.placeholderAttrText?.string, text.count > 0 {
-            self.textView.attributedText = self.textView._properties.placeholderAttrText
+        if self.textView.text.count == 0 {
+            self.textView.placeholderLabel.isHidden = false
         }
-        self.textView.didEndEditingHandler?()
-        self.textView.didEndEditingHandlerText?(self.textView)
+        self.textView.didEndEditingHandler.forEach { $0() }
+        self.textView.didEndEditingHandlerText.forEach { $0(self.textView) }
     }
     
     public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
@@ -50,8 +48,8 @@ class TextViewDelegate: NSObject, UITextViewDelegate {
         self.textView._properties.typingTimer?.invalidate()
         self.textView._properties.typingTimer = Timer.scheduledTimer(timeInterval: self.textView._properties.typingInterval, target: self, selector: #selector(invalidateTimer), userInfo: nil, repeats: false)
         self.textView._properties.isTyping = true
-        self.textView.didChangeTextHandler?()
-        self.textView.didChangeTextHandlerText?(self.textView)
+        self.textView.didChangeTextHandler.forEach { $0() }
+        self.textView.didChangeTextHandlerText.forEach { $0(self.textView) }
         if self.textView.text.count > 0 {
             self.textView._properties.textChangeListeners.forEach {
                 $0(.init(string: self.textView.text))

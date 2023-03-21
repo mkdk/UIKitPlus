@@ -9,7 +9,14 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     public var declarativeView: UTextView { self }
     public lazy var properties = Properties<UTextView>()
     lazy var _properties = PropertiesInternal()
-    
+    lazy var placeholderLabel = UText()
+
+    open override var text: String! {
+        didSet {
+            placeholderLabel.isHidden = (text == nil || (text != nil && text.isEmpty)) == false
+        }
+    }
+
     @State public var height: CGFloat = 0
     @State public var width: CGFloat = 0
     @State public var top: CGFloat = 0
@@ -86,6 +93,7 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     private lazy var _delegate = TextViewDelegate(self)
     
     private func _setup() {
+        body { placeholderLabel.multiline().edgesToSuperview() }
         clipsToBounds = true
         textContainer.lineFragmentPadding = 0
         translatesAutoresizingMaskIntoConstraints = false
@@ -121,12 +129,26 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     @discardableResult
     public func textInsets(_ insets: UIEdgeInsets) -> Self {
         textContainerInset = insets
+        placeholderLabel.edgesToSuperview(
+            top: insets.top,
+            leading: insets.left,
+            trailing: insets.right * -1,
+            bottom: insets.bottom * -1
+        )
         return self
     }
     
     @discardableResult
     public func textInsets(top: CGFloat = 0, left: CGFloat = 0, right: CGFloat = 0, bottom: CGFloat = 0) -> Self {
         textInsets(.init(top: top, left: left, bottom: bottom, right: right))
+    }
+
+    @discardableResult
+    public func lineSpacing(_ value: CGFloat) -> Self {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = value
+        self.typingAttributes[.paragraphStyle] = paragraph
+        return self
     }
     
     // MARK: - Delegate Replication
@@ -182,35 +204,35 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     
     // MARK: textViewDidBeginEditing
     
-    var didBeginEditingHandler: SimpleHandler?
-    var didBeginEditingHandlerText: SimpleHandlerText?
+    var didBeginEditingHandler: [SimpleHandler] = []
+    var didBeginEditingHandlerText: [SimpleHandlerText] = []
     
     @discardableResult
     public func onDidBeginEditing(_ handler: @escaping SimpleHandler) -> Self {
-        didBeginEditingHandler = handler
+        didBeginEditingHandler.append(handler)
         return self
     }
     
     @discardableResult
     public func onDidBeginEditing(_ handler: @escaping SimpleHandlerText) -> Self {
-        didBeginEditingHandlerText = handler
+        didBeginEditingHandlerText.append(handler)
         return self
     }
     
     // MARK: textViewDidEndEditing
     
-    var didEndEditingHandler: SimpleHandler?
-    var didEndEditingHandlerText: SimpleHandlerText?
+    var didEndEditingHandler: [SimpleHandler] = []
+    var didEndEditingHandlerText: [SimpleHandlerText] = []
     
     @discardableResult
     public func onDidEndEditing(_ handler: @escaping SimpleHandler) -> Self {
-		didEndEditingHandler = handler
+        didEndEditingHandler.append(handler)
         return self
     }
     
     @discardableResult
     public func onDidEndEditing(_ handler: @escaping SimpleHandlerText) -> Self {
-		didEndEditingHandlerText = handler
+        didEndEditingHandlerText.append(handler)
         return self
     }
     
@@ -259,18 +281,18 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     
     // MARK: textViewDidChange
     
-    var didChangeTextHandler: SimpleHandler?
-    var didChangeTextHandlerText: SimpleHandlerText?
+    var didChangeTextHandler: [SimpleHandler] = []
+    var didChangeTextHandlerText: [SimpleHandlerText] = []
     
     @discardableResult
     public func onTextDidChange(_ handler: @escaping SimpleHandler) -> Self {
-        didChangeTextHandler = handler
+        didChangeTextHandler.append(handler)
         return self
     }
     
     @discardableResult
     public func onTextDidChange(_ handler: @escaping SimpleHandlerText) -> Self {
-        didChangeTextHandlerText = handler
+        didChangeTextHandlerText.append(handler)
         return self
     }
     
@@ -390,6 +412,7 @@ extension UTextView: Refreshable {
 extension UTextView: _Fontable {
     func _setFont(_ v: UIFont?) {
         font = v
+        typingAttributes[.font] = v
     }
 }
 
@@ -413,8 +436,11 @@ extension UTextView: _Textable {
     }
     
     func _setText(_ v: NSAttributedString?) {
+        
         attributedText = nil // hack to update attributed string with changed paragraph style
-        attributedText = v
+        attributedText = v?.attributes.isEmpty == true
+            ? NSAttributedString(string: v?.string ?? "", attributes: self.typingAttributes)
+            : v
     }
 }
 
@@ -439,6 +465,7 @@ extension UTextView: _Colorable {
     
     func _setColor(_ v: UIColor?) {
         textColor = v
+        typingAttributes[.foregroundColor] = v
         properties.textColor = v ?? .clear
     }
 }
@@ -515,8 +542,8 @@ extension UTextView: _TextAutocorrectionable {
 extension UTextView: _Cleanupable {
     func _cleanup() {
         text = ""
-        didChangeTextHandler?()
-        didChangeTextHandlerText?(self)
+        didChangeTextHandler.forEach { $0() }
+        didChangeTextHandlerText.forEach { $0(self) }
     }
 }
 
@@ -538,5 +565,11 @@ extension UTextView: _Enableable {
     func _setEnabled(_ v: Bool) {
         self.isEditable = v
     }
+}
+extension NSAttributedString {
+    public var attributes: [NSAttributedString.Key: Any] {
+            guard self.length > 0 else { return [:] }
+            return self.attributes(at: 0, effectiveRange: nil)
+        }
 }
 #endif
