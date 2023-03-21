@@ -14,7 +14,7 @@ import UIKit
 
 extension Array: AnyString where Element == AnyString {
     public var attributedString: NSAttributedString {
-        var res: NSMutableAttributedString = .init()
+        let res: NSMutableAttributedString = .init()
         forEach { res.append($0.attributedString) }
         return res
     }

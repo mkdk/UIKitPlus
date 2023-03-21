@@ -9,7 +9,7 @@ open class UTextView: UITextView, AnyDeclarativeProtocol, DeclarativeProtocolInt
     public var declarativeView: UTextView { self }
     public lazy var properties = Properties<UTextView>()
     lazy var _properties = PropertiesInternal()
-    lazy var placeholderLabel = UText()
+    public lazy var placeholderLabel = UText()
 
     open override var text: String! {
         didSet {
