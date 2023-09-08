@@ -10,8 +10,10 @@ fileprivate let loaderQueue = DispatchQueue(label: "com.uikitplus.imageloader")
 fileprivate let cache = ImagesCache()
 
 open class ImagesCache {
+    lazy var fm = FileManager()
+    
     var cache = NSCache<NSString, NSData>()
-
+ 
     func save(_ key: String, _ image: Data) {
         cache.setObject(NSData(data: image), forKey: NSString(string: key))
     }
@@ -27,11 +29,14 @@ open class ImageLoader {
 	public var headers: [String: String] = [:]
 
     public var reloadingStyle: ImageReloadingStyle
-
+    
+    private let loadingPath: FileManager.SearchPathDirectory
+    
     private var uuid: UUID?
 
-    public init (_ reloadingStyle: ImageReloadingStyle = .release) {
+    public init (_ reloadingStyle: ImageReloadingStyle = .release, loadingPath: FileManager.SearchPathDirectory = .cachesDirectory) {
         self.reloadingStyle = reloadingStyle
+        self.loadingPath = loadingPath
     }
 
     open func load(_ url: String?, imageView: _UImageView, defaultImage: _UImage? = nil) {
@@ -141,7 +146,7 @@ open class ImageLoader {
 
     /// Builds path to image in cache
     open func localImagePath(_ imageURL: URL) -> URL {
-        let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)[0] as NSString
+        let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(loadingPath, .userDomainMask, true)[0] as NSString
         return URL(fileURLWithPath: documentDirectoryPath.appendingPathComponent("\(Data(imageURL.absoluteString.utf8).base64EncodedString())"))
     }
 
