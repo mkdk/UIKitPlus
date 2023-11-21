@@ -147,7 +147,7 @@ open class ImageLoader {
     /// Builds path to image in cache
     open func localImagePath(_ imageURL: URL) -> URL {
         let documentDirectoryPath = NSSearchPathForDirectoriesInDomains(loadingPath, .userDomainMask, true)[0] as NSString
-        return URL(fileURLWithPath: documentDirectoryPath.appendingPathComponent("\(Data(imageURL.absoluteString.utf8).base64EncodedString())"))
+        return URL(fileURLWithPath: documentDirectoryPath.appendingPathComponent("\(Data(imageURL.absoluteString.utf8).base64EncodedString().replacingOccurrences(of: "/", with: ""))"))
     }
 
     /// Release `imageView.image` before downloading the new one
